@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="700" height="400" viewBox="0 0 700 400">
+  <defs><clipPath id="circle"><circle cx="350" cy="125" r="92"/></clipPath></defs>
+  <circle cx="350" cy="125" r="92" fill="#008579"/>
+  <g clip-path="url(#circle)" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M275 160 Q270 80 325 45 Q365 25 405 38"/><path d="M310 190 L310 155 Q310 140 325 130 L325 95 Q325 80 340 80 L390 80"/><path d="M330 205 L330 170 L355 145 L355 110 L375 90"/><path d="M350 210 L350 185 L375 160 L375 130 L405 100"/><path d="M370 210 L370 190 L400 160 L400 125 L420 105"/><path d="M390 210 L390 190 L420 160 L420 120"/><path d="M410 205 L410 180 L435 155 L435 125"/><path d="M290 125 L290 100 Q290 70 320 65 L365 65"/><path d="M285 150 L300 135 L300 110"/><path d="M305 210 L305 190 L325 170"/><path d="M275 180 L290 165"/><path d="M325 220 L345 200 L385 200"/><path d="M350 225 L380 205 L425 205"/><path d="M375 230 L400 215 L440 215"/><path d="M395 185 L435 185"/><path d="M405 165 L445 165"/><path d="M415 145 L445 145"/><path d="M425 125 L445 125"/><path d="M390 55 L420 55"/><path d="M420 75 L435 75 L435 110"/><path d="M305 85 L305 100"/><path d="M285 195 L300 180"/><path d="M330 235 L420 235"/>
+  </g>
+  <g fill="#ffffff"><circle cx="330" cy="48" r="4"/><circle cx="390" cy="57" r="4"/><circle cx="280" cy="145" r="4"/><circle cx="435" cy="90" r="4"/></g>
+  <g fill="#b31e45"><circle cx="425" cy="100" r="3"/><circle cx="405" cy="145" r="3"/><circle cx="315" cy="115" r="3"/></g>
+  <text x="350" y="345" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="83" letter-spacing="-2" fill="#a91e43">QraftCode</text>
+</svg>
