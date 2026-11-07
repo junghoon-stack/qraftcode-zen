@@ -10,9 +10,9 @@ export async function POST(req: Request) {
     const prompt = `You are a precise ${body.language || "code"} autocomplete engine. Return only the code to insert, no markdown and no explanation.\n\nInstruction: ${body.instruction || "Complete the code naturally."}\n\nPrefix:\n${body.prefix || ""}\n\nSuffix:\n${body.suffix || ""}`
     const endpoint = provider.adapter === "anthropic" ? `${provider.baseUrl}/messages` : `${provider.baseUrl}/chat/completions`
     const payload = provider.adapter === "anthropic" ? { model, max_tokens: 256, messages: [{ role: "user", content: prompt }] } : { model, temperature: 0.1, max_tokens: 256, messages: [{ role: "user", content: prompt }] }
-    const r = await fetchJson(endpoint, { method: "POST", headers: headers(provider), body: JSON.stringify(payload) })
-    const data = await r.json() as { choices?: Array<{ message?: { content?: string } }>; content?: Array<{ text?: string }> }
-    const completion = data.choices?.[0]?.message?.content || data.content?.map((x) => x.text || "").join("") || ""
+    const r = await fetchJson(endpoint, { method: "POST", headers: headers(provider), body: JSON.stringify(payload) }, 60000)
+    const data = await r.json() as { choices?: Array<{ text?: string; message?: { content?: string; reasoning?: string } }>; output_text?: string; content?: Array<{ text?: string }> }
+    const completion = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || data.output_text || data.content?.map((x) => x.text || "").join("") || ""
     return NextResponse.json({ completion, model: `${provider.modelPrefix}${model}`, provider: provider.id })
   } catch (error) { return NextResponse.json({ error: { message: error instanceof Error ? error.message : "Completion error" } }, { status: 500 }) }
 }

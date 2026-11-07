@@ -35,8 +35,8 @@ export function headers(provider: Provider): Record<string, string> {
   if (provider.adapter === "anthropic") return { "x-api-key": key(provider), "anthropic-version": "2023-06-01", "content-type": "application/json" }
   return { authorization: `Bearer ${key(provider)}`, "content-type": "application/json" }
 }
-export async function fetchJson(url: string, init?: RequestInit) {
-  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), 12000)
+export async function fetchJson(url: string, init?: RequestInit, timeoutMs = 45000) {
+  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs)
   try { const r = await fetch(url, { ...init, signal: controller.signal, cache: "no-store" }); return r }
   finally { clearTimeout(timer) }
 }
