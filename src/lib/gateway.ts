@@ -30,12 +30,10 @@ export const curatedFreeModels = [
   "openrouter:google/gemma-4-26b-a4b-it:free",
   "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free",
   "openrouter:nvidia/nemotron-3.5-super-vl:free",
-  "openrouter:nvidia/nemotron-3.5-lightning:free",
   "openrouter:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "openrouter:cohere/north-mini-code:free",
   "openrouter:xingchen-agi/xing4.0-29b-a4b:free",
   "openrouter:recursive/flint-v1.0:free",
-  "openrouter:stealth/crouton-alpha",
   "openrouter:dots-studio/dots-3-note-preview:free",
 ]
 
