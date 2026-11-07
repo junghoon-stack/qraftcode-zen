@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
 import { providers } from "@/lib/gateway"
+import { policyStatus } from "@/lib/policy"
 export const runtime = "nodejs"
-export async function GET() { return NextResponse.json({ service: "qraftcode-zen", status: "ok", gateway: "multi-provider", configuredProviders: providers.filter((p) => p.configured).map((p) => p.id), freeRouting: true, credentials: "server-side-only" }) }
+export async function GET() { return NextResponse.json({ service: "qraftcode-zen", status: "ok", gateway: "multi-provider", configuredProviders: providers.filter((p) => p.configured).map((p) => p.id), freeRouting: true, credentials: "server-side-only", policy: policyStatus() }) }
