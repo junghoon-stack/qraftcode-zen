@@ -15,7 +15,7 @@ const definitions: Omit<Provider, "configured" | "keyless">[] = [
   { id: "llmsrelay", name: "LLMsRelay", env: "LLMSRELAY_API_KEY", baseUrl: "https://api.llmsrelay.com/v1", adapter: "openai", modelPrefix: "llmsrelay:" },
   { id: "opper", name: "Opper AI", env: "OPPER_API_KEY", baseUrl: "https://api.opper.ai/v3/compat", adapter: "openai", modelPrefix: "opper:" },
   { id: "routerlab", name: "RouterLab", env: "ROUTERLAB_API_KEY", baseUrl: "https://api.routerlab.ch/v1", adapter: "openai", modelPrefix: "routerlab:" },
-  { id: "pollinations", name: "Pollinations (keyless/free)", env: "POLLINATIONS_API_KEY", baseUrl: process.env.POLLINATIONS_BASE_URL || "https://text.pollinations.ai/openai", adapter: "openai", modelPrefix: "pollinations:" },
+  { id: "pollinations", name: "Pollinations", env: "POLLINATIONS_API_KEY", baseUrl: process.env.POLLINATIONS_BASE_URL || "https://gen.pollinations.ai/v1", adapter: "openai", modelPrefix: "pollinations:" },
   { id: "opus-proxy", name: "Opus Proxy", env: "OPUS_PROXY_API_KEY", baseUrl: process.env.OPUS_PROXY_BASE_URL || "", adapter: "openai", modelPrefix: "opus:" },
   { id: "opencode-zen", name: "Opencode Zen", env: "OPENCODE_ZEN_API_KEY", baseUrl: process.env.OPENCODE_ZEN_BASE_URL || "", adapter: "openai", modelPrefix: "zen:" },
 ]
@@ -35,6 +35,19 @@ export const curatedFreeModels = [
   "openrouter:xingchen-agi/xing4.0-29b-a4b:free",
   "openrouter:recursive/flint-v1.0:free",
   "openrouter:dots-studio/dots-3-note-preview:free",
+]
+
+/** Useful authenticated Pollinations text models; the live catalog validates availability. */
+export const curatedPollinationsModels = [
+  "pollinations:deepseek/deepseek-v4.1-flash",
+  "pollinations:minimax/minimax-m3.1-flash",
+  "pollinations:qwen/qwen3.8-2.4t-a95b",
+  "pollinations:nvidia/nemotron-3-ultra",
+  "pollinations:meta/llama-3.3-70b-instruct",
+  "pollinations:moonshotai/kimi-k3",
+  "pollinations:z-ai/glm-5.3-flash",
+  "pollinations:openai/gpt-5.4-mini",
+  "pollinations:openai/gpt-5.4-nano",
 ]
 
 export function findProvider(model?: string) {
