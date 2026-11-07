@@ -8,6 +8,9 @@ QraftCode Zen은 Provider 라우팅을 유지하는 OpenAI 호환 API Gateway입
 - 가입 사용자와 크레딧 계정은 외부 인증 DB 없이 프로세스 메모리에 저장되는 best-effort 구현입니다. 인스턴스 재시작/서버리스 인스턴스 교체 시 초기화되므로 운영에서는 영속 인증·사용량 저장소로 교체해야 합니다.
 - `AUTH_SECRET`은 세션 서명에 사용됩니다. **프로덕션에서는 반드시 충분히 긴 무작위 `AUTH_SECRET`을 설정해야 하며, 기본값은 로컬 개발 전용입니다.**
 - 기본 크레딧은 web 50, CLI 100입니다. chat completion과 code complete 요청마다 1 credit을 차감합니다.
+- 모델별 비용은 `free`·`auto`·소형 모델 1 credit, 일반 모델 2 credits, reasoning/premium 모델 4~5 credits로 계산합니다. 모델 목록 API는 각 항목에 `creditCost`를 반환하고, 응답에는 `x-credit-cost`를 포함합니다.
+- `model: "auto"`는 설정된 Provider 중 키리스/free 후보를 먼저 선택하고, 없으면 설정된 일반 Provider를 선택합니다. 현재 자동 키리스 후보는 별도 키 없이 OpenAI 호환 엔드포인트를 호출할 수 있도록 명시한 Pollinations뿐이며, 다른 공개·키리스 Provider는 검증 전 자동 호출에 넣지 않습니다.
+- API에서는 `model: "auto"`, `pollinations:<model>`, 또는 Provider별 모델 ID를 사용할 수 있습니다. 키리스 경로도 rate limit과 credit 정책을 동일하게 적용합니다.
 - API 요청은 `x-client-type: web|cli` 또는 JSON body의 `clientType`을 인식합니다. 미지정은 web이며, CLI는 API key가 있으면 key 기준, 없으면 IP 기준으로 식별합니다.
 - rate limit은 web 30 requests/min, CLI 60 requests/min이며, 저장소가 메모리 기반인 best-effort 제한입니다. 모든 정책 응답에는 `x-ratelimit-limit`, `x-ratelimit-remaining`, `x-credit-limit`, `x-credit-remaining` 헤더가 포함됩니다.
 - `/api/v1/ads/config`은 web보다 CLI에 더 많은 슬롯을 반환합니다. Meta Audience Network 웹 publisher tag는 공식 승인 후 발급된 값만 사용하며, 임의의 URL·Placement ID를 만들지 않습니다. 발급받은 공식 tag URL과 placement ID를 `NEXT_PUBLIC_META_AUDIENCE_NETWORK_TAG_URL`, `NEXT_PUBLIC_META_AUDIENCE_NETWORK_WEB_PLACEMENT_ID`에 설정하면 `MetaAudienceAd`가 로드합니다. 값이 없으면 광고 요청을 보내지 않습니다.
