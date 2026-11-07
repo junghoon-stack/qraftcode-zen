@@ -1,18 +1,121 @@
 'use client'
-import { FormEvent, useEffect, useMemo, useState } from "react"
-import MetaAudienceAd from "./components/MetaAudienceAd"
-type Model = { id: string; name: string; provider: string; free: boolean; context?: number }
-type Message = { role: "user" | "assistant"; content: string }
+
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import MetaAudienceAd from './components/MetaAudienceAd'
+
+type Model = { id: string; name: string; provider: string; free: boolean; context?: number; creditCost?: number; keyless?: boolean }
+type Provider = { id: string; name: string; status: string; keyless?: boolean }
+type Message = { role: 'user' | 'assistant'; content: string }
+
 export default function Home() {
-  const [email, setEmail] = useState(""), [authenticated, setAuthenticated] = useState(false), [registering, setRegistering] = useState(false)
-  const [models, setModels] = useState<Model[]>([]), [providers, setProviders] = useState<any[]>([]), [model, setModel] = useState(""), [freeOnly, setFreeOnly] = useState(false), [tab, setTab] = useState<"chat"|"complete">("chat")
-  const [messages, setMessages] = useState<Message[]>([{ role: "assistant", content: "ZEN GATEWAY ONLINE. 가입 후 모델을 고르고 작업을 시작하세요." }]), [input, setInput] = useState(""), [busy, setBusy] = useState(false), [language, setLanguage] = useState("typescript"), [prefix, setPrefix] = useState(""), [suffix, setSuffix] = useState(""), [completion, setCompletion] = useState("")
-  useEffect(() => { fetch('/api/auth/session').then(r=>r.json()).then(s=>{setAuthenticated(s.authenticated); if(s.email)setEmail(s.email)}) }, [])
-  useEffect(() => { if (!authenticated) return; Promise.all([fetch('/api/v1/models').then(r=>r.json()), fetch('/api/v1/providers').then(r=>r.json())]).then(([m,p])=>{setModels(m.data||[]);setProviders(p.data||[]);if(m.data?.[0])setModel(m.data[0].id)}) }, [authenticated])
-  const visible = useMemo(() => models.filter(m => !freeOnly || m.free), [models, freeOnly])
-  async function register(e: FormEvent) { e.preventDefault(); setRegistering(true); const r=await fetch('/api/auth/register',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({email})}); const d=await r.json(); if(r.ok)setAuthenticated(true); else alert(d.error?.message||'Registration failed'); setRegistering(false) }
-  async function send(e?: FormEvent) { e?.preventDefault(); if(!input.trim()||busy||!authenticated)return; const next=[...messages,{role:"user" as const,content:input.trim()}]; setMessages(next); setInput(""); setBusy(true); try { const r=await fetch('/api/v1/chat/completions',{method:'POST',headers:{'content-type':'application/json','x-client-type':'web'},body:JSON.stringify({model,messages:next,stream:false})}); const d=await r.json(); setMessages([...next,{role:'assistant',content:d.choices?.[0]?.message?.content||d.error?.message||'No response'}]) } catch { setMessages([...next,{role:'assistant',content:'Gateway request failed.'}]) } finally{setBusy(false)} }
-  async function complete() { setBusy(true); setCompletion(''); try { const r=await fetch('/api/v1/complete',{method:'POST',headers:{'content-type':'application/json','x-client-type':'web'},body:JSON.stringify({model,language,prefix,suffix})}); const d=await r.json(); setCompletion(d.completion||d.error?.message||'No completion') } finally{setBusy(false)} }
-  if (!authenticated) return <main className="gate"><div className="gate-card"><div className="brand"><img src="/logo.svg" alt="QraftCode"/><small>ZEN / GATEWAY</small></div><h1>Build with signal.<br/><span>Ship with confidence.</span></h1><p>Chat and model access require a lightweight email registration.</p><form onSubmit={register}><input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com"/><button disabled={registering}>{registering?'JOINING...':'JOIN ZEN ↗'}</button></form><small className="muted">No external auth database is connected in this environment.</small></div></main>
-  return <main className="shell"><aside><div className="brand"><img src="/logo.svg" alt="QraftCode"/><small>ZEN / GATEWAY</small></div><div className="side-title">PROVIDERS <b>{providers.filter(p=>p.status==='configured').length}/{providers.length}</b></div><div className="provider-list">{providers.map(p=><div className="provider" key={p.id}><i className={p.status==='configured'?'on':''}/>{p.name}<em>{p.status==='configured'?'LIVE':'OFF'}</em></div>)}</div><MetaAudienceAd label="META / WEB BANNER"/><div className="side-footer">WEB CREDITS 50<br/><span>{email}</span></div></aside><section className="main"><header><div><p className="eyebrow">MULTI-PROVIDER AI WORKSPACE</p><h1>Build with signal.<br/><span>Ship with confidence.</span></h1></div><div className="telemetry"><strong><i className="on"/> SYSTEM OPERATIONAL</strong><small>{models.length} models · {models.filter(m=>m.free).length} free</small></div></header><div className="toolbar"><select value={model} onChange={e=>setModel(e.target.value)}>{visible.map(m=><option value={m.id} key={m.id}>{m.free?'◇ ':''}{m.id}</option>)}</select><label className="toggle"><input type="checkbox" checked={freeOnly} onChange={e=>setFreeOnly(e.target.checked)}/><span/>FREE ONLY</label><div className="tabs"><button className={tab==='chat'?'active':''} onClick={()=>setTab('chat')}>CHAT</button><button className={tab==='complete'?'active':''} onClick={()=>setTab('complete')}>CODE COMPLETE</button></div></div>{tab==='chat'?<div className="workspace"><div className="messages">{messages.map((m,i)=><div className={'message '+m.role} key={i}><span className="role">{m.role==='user'?'YOU':'ZEN'}</span><div>{m.content}</div></div>)}{busy&&<div className="message assistant"><span className="role">ZEN</span><div className="pulse">processing ···</div></div>}</div><form onSubmit={send} className="composer"><textarea value={input} onChange={e=>setInput(e.target.value)} placeholder="Ask your gateway anything..."/><button disabled={busy}>SEND ↗</button></form></div>:<div className="complete"><div className="editor"><div className="editor-head"><span>EDITOR / {language.toUpperCase()}</span><select value={language} onChange={e=>setLanguage(e.target.value)}><option>typescript</option><option>python</option><option>javascript</option><option>rust</option><option>go</option></select></div><textarea value={prefix} onChange={e=>setPrefix(e.target.value)} placeholder="Paste code context here..."/><textarea value={suffix} onChange={e=>setSuffix(e.target.value)} placeholder="Optional suffix / expected ending..."/></div><div className="completion-result"><div className="editor-head"><span>SUGGESTION</span><span className="live">AI LIVE</span></div><pre>{completion||'// Your completion will appear here\n// powered by the selected gateway model'}</pre><button onClick={complete} disabled={busy}>{busy?'RUNNING...':'GENERATE COMPLETION ↗'}</button></div></div>}<footer><span>QRAFTCODE ZEN · OPENAI-COMPATIBLE GATEWAY</span><span>HEALTH /api/health · API /api/v1</span></footer></section></main>
+  const [email, setEmail] = useState('')
+  const [authenticated, setAuthenticated] = useState(false)
+  const [registering, setRegistering] = useState(false)
+  const [models, setModels] = useState<Model[]>([])
+  const [providers, setProviders] = useState<Provider[]>([])
+  const [model, setModel] = useState('auto')
+  const [freeOnly, setFreeOnly] = useState(false)
+  const [tab, setTab] = useState<'chat' | 'complete'>('chat')
+  const [messages, setMessages] = useState<Message[]>([{ role: 'assistant', content: 'ZEN GATEWAY ONLINE. 모델을 고르고 작업을 시작하세요.' }])
+  const [input, setInput] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [loadingModels, setLoadingModels] = useState(false)
+  const [notice, setNotice] = useState('')
+  const [language, setLanguage] = useState('typescript')
+  const [prefix, setPrefix] = useState('')
+  const [suffix, setSuffix] = useState('')
+  const [completion, setCompletion] = useState('')
+
+  useEffect(() => {
+    fetch('/api/auth/session').then((r) => r.json()).then((s) => {
+      setAuthenticated(s.authenticated)
+      if (s.email) setEmail(s.email)
+    })
+  }, [])
+
+  const loadCatalog = useCallback(async () => {
+    setLoadingModels(true)
+    setNotice('')
+    try {
+      const [modelResponse, providerResponse] = await Promise.all([
+        fetch('/api/v1/models', { cache: 'no-store' }),
+        fetch('/api/v1/providers', { cache: 'no-store' }),
+      ])
+      const modelData = await modelResponse.json()
+      const providerData = await providerResponse.json()
+      if (!modelResponse.ok) throw new Error(modelData.error?.message || '모델 목록을 불러오지 못했습니다.')
+      setModels(modelData.data || [])
+      setProviders(providerData.data || [])
+      if (!model && modelData.data?.[0]) setModel(modelData.data[0].id)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '카탈로그를 불러오지 못했습니다.')
+    } finally {
+      setLoadingModels(false)
+    }
+  }, [model])
+
+  useEffect(() => { if (authenticated) void loadCatalog() }, [authenticated, loadCatalog])
+
+  const visibleModels = useMemo(() => models.filter((item) => !freeOnly || item.free), [models, freeOnly])
+  const liveProviders = providers.filter((provider) => provider.status === 'configured').length
+
+  async function register(event: FormEvent) {
+    event.preventDefault()
+    setRegistering(true)
+    setNotice('')
+    try {
+      const response = await fetch('/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error?.message || '등록에 실패했습니다.')
+      setAuthenticated(true)
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : '등록에 실패했습니다.')
+    } finally { setRegistering(false) }
+  }
+
+  async function send(event?: FormEvent) {
+    event?.preventDefault()
+    if (!input.trim() || busy || !authenticated) return
+    const next = [...messages, { role: 'user' as const, content: input.trim() }]
+    setMessages(next); setInput(''); setBusy(true); setNotice('')
+    try {
+      const response = await fetch('/api/v1/chat/completions', { method: 'POST', headers: { 'content-type': 'application/json', 'x-client-type': 'web' }, body: JSON.stringify({ model: model || 'auto', messages: next, stream: false }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error?.message || 'Gateway request failed.')
+      setMessages([...next, { role: 'assistant', content: data.choices?.[0]?.message?.content || '응답이 비어 있습니다.' }])
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Gateway request failed.')
+      setMessages(next)
+    } finally { setBusy(false) }
+  }
+
+  async function complete() {
+    setBusy(true); setCompletion(''); setNotice('')
+    try {
+      const response = await fetch('/api/v1/complete', { method: 'POST', headers: { 'content-type': 'application/json', 'x-client-type': 'web' }, body: JSON.stringify({ model: model || 'auto', language, prefix, suffix }) })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error?.message || 'Completion request failed.')
+      setCompletion(data.completion || 'No completion')
+    } catch (error) { setNotice(error instanceof Error ? error.message : 'Completion request failed.') }
+    finally { setBusy(false) }
+  }
+
+  if (!authenticated) return <main className="gate"><div className="gate-card"><div className="brand"><img src="/logo.svg" alt="QraftCode" /><small>ZEN / GATEWAY</small></div><div className="gate-kicker">OPEN MODEL ACCESS / 01</div><h1>Build with signal.<br /><span>Ship with confidence.</span></h1><p>가벼운 이메일 등록 후 멀티 Provider 모델과 코드 완성 기능을 사용할 수 있습니다.</p><form onSubmit={register}><input type="email" required value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" /><button disabled={registering}>{registering ? 'JOINING...' : 'JOIN ZEN ↗'}</button></form>{notice && <p className="notice">{notice}</p>}<small className="muted">QraftCode Zen · 서버 측 키 보관 · OpenAI 호환 API</small></div></main>
+
+  return <main className="shell">
+    <aside>
+      <div className="brand"><img src="/logo.svg" alt="QraftCode" /><small>ZEN / GATEWAY</small></div>
+      <div className="side-title">PROVIDERS <b>{liveProviders}/{providers.length}</b></div>
+      <div className="provider-list">{providers.map((provider) => <div className="provider" key={provider.id}><i className={provider.status === 'configured' ? 'on' : ''} />{provider.name}<em>{provider.keyless ? 'KEYLESS' : provider.status === 'configured' ? 'LIVE' : 'OFF'}</em></div>)}</div>
+      <MetaAudienceAd label="META / WEB BANNER" />
+      <div className="side-footer"><strong>WEB CREDITS 50</strong><br /><span>{email}</span></div>
+    </aside>
+    <section className="main">
+      <header><div><p className="eyebrow">MULTI-PROVIDER AI WORKSPACE</p><h1>Build with signal.<br /><span>Ship with confidence.</span></h1><p className="subhead">One gateway. Hundreds of models. A clean path from prompt to production.</p></div><div className="telemetry"><strong><i className="on" /> SYSTEM OPERATIONAL</strong><small>{models.length.toLocaleString()} models · {models.filter((item) => item.free).length} free</small><small>WEB / 50 CREDITS</small></div></header>
+      <div className="toolbar"><div className="model-picker"><label>MODEL ROUTE</label><select value={model} onChange={(event) => setModel(event.target.value)}>{visibleModels.map((item) => <option value={item.id} key={item.id}>{item.free ? '◇ ' : ''}{item.id} · {item.creditCost ?? 1} cr</option>)}</select></div><label className="toggle"><input type="checkbox" checked={freeOnly} onChange={(event) => setFreeOnly(event.target.checked)} /><span />FREE ONLY</label><button className="refresh" onClick={() => void loadCatalog()} disabled={loadingModels}>{loadingModels ? 'SYNCING...' : '↻ SYNC MODELS'}</button><div className="tabs"><button className={tab === 'chat' ? 'active' : ''} onClick={() => setTab('chat')}>CHAT</button><button className={tab === 'complete' ? 'active' : ''} onClick={() => setTab('complete')}>CODE COMPLETE</button></div></div>
+      {notice && <div className="notice bar">{notice}</div>}
+      {tab === 'chat' ? <div className="workspace"><div className="messages">{messages.map((message, index) => <div className={'message ' + message.role} key={index}><span className="role">{message.role === 'user' ? 'YOU' : 'ZEN'}</span><div>{message.content}</div></div>)}{busy && <div className="message assistant"><span className="role">ZEN</span><div className="pulse">processing ···</div></div>}</div><form onSubmit={send} className="composer"><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask your gateway anything..." /><button disabled={busy}>{busy ? 'RUNNING...' : 'SEND ↗'}</button></form></div> : <div className="complete"><div className="editor"><div className="editor-head"><span>EDITOR / {language.toUpperCase()}</span><select value={language} onChange={(event) => setLanguage(event.target.value)}><option>typescript</option><option>python</option><option>javascript</option><option>rust</option><option>go</option></select></div><textarea value={prefix} onChange={(event) => setPrefix(event.target.value)} placeholder="Paste code context here..." /><textarea value={suffix} onChange={(event) => setSuffix(event.target.value)} placeholder="Optional suffix / expected ending..." /></div><div className="completion-result"><div className="editor-head"><span>SUGGESTION</span><span className="live">AI LIVE</span></div><pre>{completion || '// Your completion will appear here\n// powered by the selected gateway model'}</pre><button onClick={() => void complete()} disabled={busy}>{busy ? 'RUNNING...' : 'GENERATE COMPLETION ↗'}</button></div></div>}
+      <footer><span>QRAFTCODE ZEN · OPENAI-COMPATIBLE GATEWAY</span><span>HEALTH /api/health · API /api/v1</span></footer>
+    </section>
+  </main>
 }

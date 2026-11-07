@@ -1,0 +1,14 @@
+{
+  "name": "qraftcode-cli",
+  "version": "0.1.0",
+  "description": "QraftCode Zen CLI client for chat, models, providers, and code completion",
+  "type": "module",
+  "bin": {
+    "qraft": "./qraft.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "files": ["qraft.mjs", "README.md"],
+  "license": "MIT"
+}
