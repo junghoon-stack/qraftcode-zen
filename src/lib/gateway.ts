@@ -22,12 +22,29 @@ const definitions: Omit<Provider, "configured" | "keyless">[] = [
 
 export const providers: Provider[] = definitions.map((p) => ({ ...p, keyless: p.id === "pollinations", configured: Boolean(p.baseUrl) && (p.id === "pollinations" || Boolean(process.env[p.env])) }))
 export const key = (p: Provider) => process.env[p.env] || ""
+
+/** Curated free catalog: general chat, reasoning, and coding only. */
+export const curatedFreeModels = [
+  "openrouter:openrouter/free",
+  "openrouter:google/gemma-4-31b-it:free",
+  "openrouter:google/gemma-4-26b-a4b-it:free",
+  "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free",
+  "openrouter:nvidia/nemotron-3.5-super-vl:free",
+  "openrouter:nvidia/nemotron-3.5-lightning:free",
+  "openrouter:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "openrouter:cohere/north-mini-code:free",
+  "openrouter:xingchen-agi/xing4.0-29b-a4b:free",
+]
+
 export function findProvider(model?: string) {
   const value = model || ""
   const explicit = providers.find((p) => value.startsWith(p.modelPrefix))
   if (explicit) return explicit
   const candidates = providers.filter((p) => p.configured)
-  if (value === "auto" || !value) return candidates.sort((a, b) => Number(b.keyless) - Number(a.keyless))[0]
+  if (value === "auto" || !value) {
+    // Prefer the curated OpenRouter free catalog when available; use keyless only as fallback.
+    return candidates.find((p) => p.id === "openrouter") || candidates.sort((a, b) => Number(b.keyless) - Number(a.keyless))[0]
+  }
   return candidates[0]
 }
 export function cleanModel(model: string | undefined, provider?: Provider) {
@@ -45,6 +62,4 @@ export async function fetchJson(url: string, init?: RequestInit, timeoutMs = 450
   try { const r = await fetch(url, { ...init, signal: controller.signal, cache: "no-store" }); return r }
   finally { clearTimeout(timer) }
 }
-export const freeFallback = [
-  "openrouter:openrouter/free", "openrouter:google/gemma-4-26b-a4b-it:free", "openrouter:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "openrouter:cohere/north-mini-code:free",
-]
+export const freeFallback = curatedFreeModels
