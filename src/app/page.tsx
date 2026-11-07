@@ -7,6 +7,23 @@ type Model = { id: string; name: string; provider: string; free: boolean; contex
 type Provider = { id: string; name: string; status: string; keyless?: boolean }
 type Message = { role: 'user' | 'assistant'; content: string }
 
+const providerMarks: Record<string, { mark: string; tone: string }> = {
+  openrouter: { mark: 'OR', tone: 'violet' },
+  google: { mark: 'G', tone: 'blue' },
+  nvidia: { mark: 'N', tone: 'green' },
+  cohere: { mark: 'C', tone: 'orange' },
+  recursive: { mark: 'R', tone: 'cyan' },
+  stealth: { mark: 'S', tone: 'red' },
+  dots: { mark: 'D', tone: 'pink' },
+  airforce: { mark: 'AF', tone: 'slate' },
+}
+
+function ProviderMark({ provider }: { provider: string }) {
+  const key = provider.toLowerCase().split(':')[0].split('/')[0]
+  const item = providerMarks[key] || { mark: key.slice(0, 2).toUpperCase(), tone: 'slate' }
+  return <span className={`provider-mark ${item.tone}`} aria-hidden="true">{item.mark}</span>
+}
+
 export default function Home() {
   const [email, setEmail] = useState('')
   const [authenticated, setAuthenticated] = useState(false)
@@ -14,7 +31,8 @@ export default function Home() {
   const [models, setModels] = useState<Model[]>([])
   const [providers, setProviders] = useState<Provider[]>([])
   const [model, setModel] = useState('auto')
-  const [freeOnly, setFreeOnly] = useState(false)
+  const [freeOnly, setFreeOnly] = useState(true)
+  const [modelOpen, setModelOpen] = useState(false)
   const [tab, setTab] = useState<'chat' | 'complete'>('chat')
   const [messages, setMessages] = useState<Message[]>([{ role: 'assistant', content: 'ZEN GATEWAY ONLINE. 모델을 고르고 작업을 시작하세요.' }])
   const [input, setInput] = useState('')
@@ -112,7 +130,7 @@ export default function Home() {
     </aside>
     <section className="main">
       <header><div><p className="eyebrow">MULTI-PROVIDER AI WORKSPACE</p><h1>Build with signal.<br /><span>Ship with confidence.</span></h1><p className="subhead">One gateway. Hundreds of models. A clean path from prompt to production.</p></div><div className="telemetry"><strong><i className="on" /> SYSTEM OPERATIONAL</strong><small>{models.length.toLocaleString()} models · {models.filter((item) => item.free).length} free</small><small>WEB / 50 CREDITS</small></div></header>
-      <div className="toolbar"><div className="model-picker"><label>MODEL ROUTE</label><select value={model} onChange={(event) => setModel(event.target.value)}>{visibleModels.map((item) => <option value={item.id} key={item.id}>{item.free ? '◇ ' : ''}{item.id} · {item.creditCost ?? 1} cr</option>)}</select></div><label className="toggle"><input type="checkbox" checked={freeOnly} onChange={(event) => setFreeOnly(event.target.checked)} /><span />FREE ONLY</label><button className="refresh" onClick={() => void loadCatalog()} disabled={loadingModels}>{loadingModels ? 'SYNCING...' : '↻ SYNC MODELS'}</button><div className="tabs"><button className={tab === 'chat' ? 'active' : ''} onClick={() => setTab('chat')}>CHAT</button><button className={tab === 'complete' ? 'active' : ''} onClick={() => setTab('complete')}>CODE COMPLETE</button></div></div>
+      <div className="toolbar"><div className="model-picker"><label>MODEL ROUTE · {visibleModels.length} CURATED FREE</label><button className="model-trigger" onClick={() => setModelOpen((open) => !open)} aria-expanded={modelOpen}><ProviderMark provider={models.find((item) => item.id === model)?.provider || 'auto'} /><span>{models.find((item) => item.id === model)?.name || 'Auto · quality free routing'}</span><b>{modelOpen ? '⌃' : '⌄'}</b></button>{modelOpen && <div className="model-menu">{visibleModels.map((item) => <button className={item.id === model ? 'selected' : ''} value={item.id} onClick={() => { setModel(item.id); setModelOpen(false) }} key={item.id}><ProviderMark provider={item.provider} /><span><strong>{item.name}</strong><small>{item.provider} · {item.creditCost ?? 1} credits</small></span>{item.id === model && <i>✓</i>}</button>)}</div>}</div><label className="toggle"><input type="checkbox" checked={freeOnly} onChange={(event) => setFreeOnly(event.target.checked)} /><span />FREE ONLY</label><button className="refresh" onClick={() => void loadCatalog()} disabled={loadingModels}>{loadingModels ? 'SYNCING...' : '↻ SYNC MODELS'}</button><div className="tabs"><button className={tab === 'chat' ? 'active' : ''} onClick={() => setTab('chat')}>CHAT</button><button className={tab === 'complete' ? 'active' : ''} onClick={() => setTab('complete')}>CODE COMPLETE</button></div></div>
       {notice && <div className="notice bar">{notice}</div>}
       {tab === 'chat' ? <div className="workspace"><div className="messages">{messages.map((message, index) => <div className={'message ' + message.role} key={index}><span className="role">{message.role === 'user' ? 'YOU' : 'ZEN'}</span><div>{message.content}</div></div>)}{busy && <div className="message assistant"><span className="role">ZEN</span><div className="pulse">processing ···</div></div>}</div><form onSubmit={send} className="composer"><textarea value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask your gateway anything..." /><button disabled={busy}>{busy ? 'RUNNING...' : 'SEND ↗'}</button></form></div> : <div className="complete"><div className="editor"><div className="editor-head"><span>EDITOR / {language.toUpperCase()}</span><select value={language} onChange={(event) => setLanguage(event.target.value)}><option>typescript</option><option>python</option><option>javascript</option><option>rust</option><option>go</option></select></div><textarea value={prefix} onChange={(event) => setPrefix(event.target.value)} placeholder="Paste code context here..." /><textarea value={suffix} onChange={(event) => setSuffix(event.target.value)} placeholder="Optional suffix / expected ending..." /></div><div className="completion-result"><div className="editor-head"><span>SUGGESTION</span><span className="live">AI LIVE</span></div><pre>{completion || '// Your completion will appear here\n// powered by the selected gateway model'}</pre><button onClick={() => void complete()} disabled={busy}>{busy ? 'RUNNING...' : 'GENERATE COMPLETION ↗'}</button></div></div>}
       <footer><span>QRAFTCODE ZEN · OPENAI-COMPATIBLE GATEWAY</span><span>HEALTH /api/health · API /api/v1</span></footer>
