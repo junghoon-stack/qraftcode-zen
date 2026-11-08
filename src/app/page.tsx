@@ -51,6 +51,7 @@ export default function Home() {
     fetch('/api/auth/session').then((r) => r.json()).then((s) => {
       setAuthenticated(s.authenticated)
       if (s.email) setEmail(s.email)
+      if (s.authenticated) setSettingsOpen(true)
     })
   }, [])
 
