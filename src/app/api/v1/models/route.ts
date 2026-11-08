@@ -5,9 +5,9 @@ import { authorize, creditCost, policyHeaders } from "@/lib/policy"
 export const runtime = "nodejs"
 const MAX_MODELS_PER_PROVIDER = 10
 
-function modelScore(model: { id: string; free: boolean; context: number }) {
+function modelScore(model: { id: string; free: boolean; context: number; image?: boolean }) {
   const id = model.id.toLowerCase()
-  if (/audio|tts|speech|embed|rerank|image|video|vision-only/.test(id)) return -100
+  if (/audio|tts|speech|embed|rerank|video|vision-only/.test(id)) return -100
   let score = model.free ? 40 : 0
   if (/reason|thinking|coder|code|instruct|pro|large|ultra|opus|sonnet|nemotron|deepseek|qwen|gemma|llama|kimi/.test(id)) score += 20
   if (/mini|flash|nano|small|lite/.test(id)) score += 5
@@ -16,9 +16,11 @@ function modelScore(model: { id: string; free: boolean; context: number }) {
 }
 
 export async function GET(req: Request) {
-  const policy = authorize(req)
+  const policy = authorize(req, undefined, 0, { allowAnonymous: true })
   if (!policy.ok) return NextResponse.json(policy.error.body, { status: policy.error.status, headers: policy.error.headers })
   const identity = policy.state.email || policy.state.identity
+  const publicAnonymous = policy.state.clientType === "anonymous"
+  const webClient = policy.state.clientType === "web"
 
   const results = await Promise.allSettled(providers.filter((p) => isConfigured(p, identity)).map(async (p) => {
     const endpoint = p.id === "pollinations"
@@ -34,19 +36,21 @@ export async function GET(req: Request) {
       free: m.id.endsWith(":free") || Number(m.pricing?.prompt || m.pricing?.promptTextTokens || 1) === 0,
       context: m.context_length || m.context_window || 0,
       health: m.health?.status,
-    })).filter((m) => modelScore(m) > -100)
+      image: /image|vision|flux|sdxl|stable-diffusion|dall-e|imagen|midjourney/.test(m.id.toLowerCase()),
+      coding: /code|coder|codestral|deepseek-coder|starcoder|qwen.*coder|devstral|swe|program/.test(m.id.toLowerCase()),
+    })).filter((m) => modelScore(m) > -100 && (!m.image || webClient) && (!publicAnonymous || m.free))
     const selected = models.sort((a, b) => modelScore(b) - modelScore(a) || a.name.localeCompare(b.name)).slice(0, MAX_MODELS_PER_PROVIDER)
     return { provider: p.id, models: selected, available: models.length }
   }))
 
   const providerResults = results.flatMap((r) => r.status === "fulfilled" ? [r.value] : [])
   const catalog = providerResults.flatMap((r) => r.models)
-  const merged = catalog.filter((m) => !m.free || curatedFreeModels.includes(m.id) || (m.provider === "pollinations" && curatedPollinationsModels.includes(m.id)))
-  for (const id of freeFallback) if (!merged.some((m) => m.id === id)) merged.push({ id, name: id.replace(/^openrouter:/, ""), provider: "openrouter", free: true, context: 0, health: undefined })
+  const merged = catalog.filter((m) => publicAnonymous ? m.free : (!m.free || curatedFreeModels.includes(m.id) || (m.provider === "pollinations" && curatedPollinationsModels.includes(m.id))))
+  for (const id of freeFallback) if (!merged.some((m) => m.id === id)) merged.push({ id, name: id.replace(/^openrouter:/, ""), provider: "openrouter", free: true, context: 0, health: undefined, image: false, coding: /code|coder/.test(id) })
 
   const data = [
-    { id: "auto", name: "Auto · best available / keyless first", provider: "auto", free: true, context: 0, creditCost: 1, keyless: providers.some((p) => p.configured && p.keyless) },
-    ...merged.map((m) => ({ ...m, creditCost: creditCost(m.id), keyless: providers.find((p) => p.id === m.provider)?.keyless || false })),
+    { id: "auto", name: "Auto · best available / keyless first", provider: "auto", free: true, context: 0, creditCost: 1, keyless: providers.some((p) => p.configured && p.keyless), image: false, coding: false },
+    ...Array.from(new Map(merged.filter((m) => !m.image || webClient).map((m) => [m.id, m])).values()).map((m) => ({ ...m, creditCost: creditCost(m.id), keyless: providers.find((p) => p.id === m.provider)?.keyless || false })),
   ]
   return NextResponse.json({
     object: "list",
@@ -60,6 +64,9 @@ export async function GET(req: Request) {
       providerModelCounts: Object.fromEntries(providerResults.map((r) => [r.provider, { returned: r.models.length, available: r.available }])),
       pricing: { auto: 1, free: 1, small: 1, standard: 2, premium: 5, reasoning: 4 },
       keylessProviders: providers.filter((p) => isConfigured(p, identity) && p.keyless).map((p) => p.id),
+      clientType: policy.state.clientType,
+      imageModels: data.filter((m) => m.image).length,
+      codingModels: data.filter((m) => m.coding).length,
     },
   }, { headers: policyHeaders(policy.state) })
 }

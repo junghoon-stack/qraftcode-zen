@@ -27,8 +27,11 @@ qraft providers
 ## 설정
 
 ```bash
-export QRAFTCODE_API_URL="https://qraftcode.vercel.app/api/v1"
+export QRAFTCODE_API_URL="https://qraftcode.vercel.app/v1"
+export QRAFTCODE_API_KEY="sk-qraft-..."
 export QRAFTCODE_MODEL="auto"
 ```
 
-프롬프트와 API 키는 광고 파트너에게 전달하지 않으며, API 키는 QraftCode Zen 서버 측에서만 사용합니다.
+키 없이도 공개된 일부 무료 모델을 익명 크레딧으로 사용할 수 있습니다. `sk-qraft-...` 키를 사용하면 Zen API 월별 크레딧 한도가 적용됩니다. CLI 모델 목록에는 이미지 모델을 제외한 Provider별 코딩·채팅 모델이 포함되며, 이미지 생성 모델은 웹 버전에서만 제공합니다.
+
+프롬프트와 API 키는 광고 파트너에게 전달하지 않습니다.

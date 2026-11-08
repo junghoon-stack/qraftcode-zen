@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 
-const baseUrl = (process.env.QRAFTCODE_API_URL || 'https://qraftcode.vercel.app/api/v1').replace(/\/$/, '');
+const baseUrl = (process.env.QRAFTCODE_API_URL || 'https://qraftcode.vercel.app/v1').replace(/\/$/, '');
+const apiKey = process.env.QRAFTCODE_API_KEY || '';
 const modelArg = process.argv.indexOf('--model');
 const model = modelArg >= 0 ? process.argv[modelArg + 1] : (process.env.QRAFTCODE_MODEL || 'auto');
 const args = process.argv.slice(2).filter((arg, index, list) => arg !== '--model' && (modelArg < 0 || index !== modelArg + 1));
 const command = args[0] || 'chat';
 
 function help() {
-  console.log(`QraftCode CLI · YOUR CODE. YOUR CRAFT.\n\nUsage:\n  qraft ask "질문" [--model provider/model]\n  qraft chat\n  qraft models\n  qraft providers\n\nEnvironment:\n  QRAFTCODE_API_URL  API base URL (default: ${baseUrl})\n  QRAFTCODE_MODEL    Default model ID\n`);
+  console.log(`QraftCode CLI · YOUR CODE. YOUR CRAFT.\n\nUsage:\n  qraft ask "질문" [--model provider/model]\n  qraft chat\n  qraft models\n\nEnvironment:\n  QRAFTCODE_API_URL  API base URL (default: ${baseUrl})\n  QRAFTCODE_API_KEY  Optional sk-qraft API key with monthly credits\n  QRAFTCODE_MODEL    Default model ID\n`);
 }
 
 async function request(path, init = {}) {
-  const response = await fetch(`${baseUrl}${path}`, { ...init, headers: { 'content-type': 'application/json', ...(init.headers || {}) } });
+  const response = await fetch(`${baseUrl}${path}`, { ...init, headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}), ...(init.headers || {}) } });
   const text = await response.text();
   let data; try { data = JSON.parse(text); } catch { data = text; }
   if (!response.ok) throw new Error(typeof data === 'string' ? data : data?.error?.message || data?.error || `HTTP ${response.status}`);
@@ -20,7 +21,7 @@ async function request(path, init = {}) {
 
 async function ask(prompt) {
   if (!prompt) return help();
-  const response = await fetch(`${baseUrl}/chat/completions`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model, stream: true, messages: [{ role: 'user', content: prompt }] }) });
+  const response = await fetch(`${baseUrl}/chat/completions`, { method: 'POST', headers: { 'content-type': 'application/json', ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}) }, body: JSON.stringify({ model, stream: true, clientType: 'cli', messages: [{ role: 'user', content: prompt }] }) });
   if (!response.ok) throw new Error(await response.text());
   if (!response.body) throw new Error('Streaming is unavailable.');
   const reader = response.body.getReader(); const decoder = new TextDecoder(); let buffer = '';
