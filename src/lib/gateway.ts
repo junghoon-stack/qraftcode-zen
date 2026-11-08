@@ -22,59 +22,41 @@ const definitions: Omit<Provider, "configured" | "keyless">[] = [
 ]
 
 export const providers: Provider[] = definitions.map((p) => ({ ...p, keyless: p.id === "pollinations", configured: Boolean(p.baseUrl) && (p.id === "pollinations" || Boolean(process.env[p.env])) }))
-export const key = (p: Provider) => process.env[p.env] || ""
+const runtimeKeys = new Map<string, Map<string, string>>()
+export const key = (p: Provider, identity?: string) => runtimeKeys.get(identity || "")?.get(p.id) || process.env[p.env] || ""
+export function setRuntimeKey(identity: string, providerId: string, value: string) {
+  const provider = providers.find((p) => p.id === providerId)
+  if (!provider || !value.trim()) return false
+  const keys = runtimeKeys.get(identity) || new Map<string, string>()
+  keys.set(providerId, value.trim()); runtimeKeys.set(identity, keys); return true
+}
+export function clearRuntimeKey(identity: string, providerId: string) { runtimeKeys.get(identity)?.delete(providerId) }
+export function isConfigured(provider: Provider, identity?: string) { return provider.configured || Boolean(identity && runtimeKeys.get(identity)?.has(provider.id)) }
 
-/** Curated free catalog: general chat, reasoning, and coding only. */
 export const curatedFreeModels = [
-  "openrouter:openrouter/free",
-  "openrouter:google/gemma-4-31b-it:free",
-  "openrouter:google/gemma-4-26b-a4b-it:free",
-  "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free",
-  "openrouter:nvidia/nemotron-3.5-super-vl:free",
-  "openrouter:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "openrouter:cohere/north-mini-code:free",
-  "openrouter:xingchen-agi/xing4.0-29b-a4b:free",
-  "openrouter:recursive/flint-v1.0:free",
-  "openrouter:dots-studio/dots-3-note-preview:free",
+  "openrouter:openrouter/free", "openrouter:google/gemma-4-31b-it:free", "openrouter:google/gemma-4-26b-a4b-it:free",
+  "openrouter:nvidia/nemotron-3-ultra-550b-a55b:free", "openrouter:nvidia/nemotron-3.5-super-vl:free",
+  "openrouter:nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", "openrouter:cohere/north-mini-code:free",
+  "openrouter:xingchen-agi/xing4.0-29b-a4b:free", "openrouter:recursive/flint-v1.0:free", "openrouter:dots-studio/dots-3-note-preview:free",
 ]
-
-/** Useful authenticated Pollinations text models; the live catalog validates availability. */
 export const curatedPollinationsModels = [
-  "pollinations:deepseek/deepseek-v4.1-flash",
-  "pollinations:minimax/minimax-m3.1-flash",
-  "pollinations:qwen/qwen3.8-2.4t-a95b",
-  "pollinations:nvidia/nemotron-3-ultra",
-  "pollinations:meta/llama-3.3-70b-instruct",
-  "pollinations:moonshotai/kimi-k3",
-  "pollinations:z-ai/glm-5.3-flash",
-  "pollinations:openai/gpt-5.4-mini",
-  "pollinations:openai/gpt-5.4-nano",
+  "pollinations:deepseek/deepseek-v4.1-flash", "pollinations:minimax/minimax-m3.1-flash", "pollinations:qwen/qwen3.8-2.4t-a95b",
+  "pollinations:nvidia/nemotron-3-ultra", "pollinations:meta/llama-3.3-70b-instruct", "pollinations:moonshotai/kimi-k3",
+  "pollinations:z-ai/glm-5.3-flash", "pollinations:openai/gpt-5.4-mini", "pollinations:openai/gpt-5.4-nano",
 ]
-
-export function findProvider(model?: string) {
+export function findProvider(model?: string, identity?: string) {
   const value = model || ""
-  const explicit = providers.find((p) => value.startsWith(p.modelPrefix))
+  const explicit = providers.find((p) => value.startsWith(p.modelPrefix) && isConfigured(p, identity))
   if (explicit) return explicit
-  const candidates = providers.filter((p) => p.configured)
-  if (value === "auto" || !value) {
-    // Prefer the curated OpenRouter free catalog when available; use keyless only as fallback.
-    return candidates.find((p) => p.id === "openrouter") || candidates.sort((a, b) => Number(b.keyless) - Number(a.keyless))[0]
-  }
+  const candidates = providers.filter((p) => isConfigured(p, identity))
+  if (value === "auto" || !value) return candidates.find((p) => p.id === "pollinations") || candidates.find((p) => p.id === "openrouter") || candidates.sort((a, b) => Number(b.keyless) - Number(a.keyless))[0]
   return candidates[0]
 }
-export function cleanModel(model: string | undefined, provider?: Provider) {
-  if (!model) return ""
-  if (provider && model.startsWith(provider.modelPrefix)) return model.slice(provider.modelPrefix.length)
-  return model
-}
-export function headers(provider: Provider): Record<string, string> {
-  if (provider.adapter === "anthropic") return { "x-api-key": key(provider), "anthropic-version": "2023-06-01", "content-type": "application/json" }
-  const token = key(provider)
+export function cleanModel(model: string | undefined, provider?: Provider) { return !model ? "" : provider && model.startsWith(provider.modelPrefix) ? model.slice(provider.modelPrefix.length) : model }
+export function headers(provider: Provider, identity?: string): Record<string, string> {
+  if (provider.adapter === "anthropic") return { "x-api-key": key(provider, identity), "anthropic-version": "2023-06-01", "content-type": "application/json" }
+  const token = key(provider, identity)
   return { ...(token ? { authorization: `Bearer ${token}` } : {}), "content-type": "application/json" }
 }
-export async function fetchJson(url: string, init?: RequestInit, timeoutMs = 45000) {
-  const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs)
-  try { const r = await fetch(url, { ...init, signal: controller.signal, cache: "no-store" }); return r }
-  finally { clearTimeout(timer) }
-}
+export async function fetchJson(url: string, init?: RequestInit, timeoutMs = 45000) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeoutMs); try { return await fetch(url, { ...init, signal: controller.signal, cache: "no-store" }) } finally { clearTimeout(timer) } }
 export const freeFallback = curatedFreeModels

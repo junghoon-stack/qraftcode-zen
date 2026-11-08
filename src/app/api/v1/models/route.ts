@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { curatedFreeModels, curatedPollinationsModels, fetchJson, freeFallback, providers, headers } from "@/lib/gateway"
+import { curatedFreeModels, curatedPollinationsModels, fetchJson, freeFallback, providers, headers, isConfigured } from "@/lib/gateway"
 import { authorize, creditCost, policyHeaders } from "@/lib/policy"
 
 export const runtime = "nodejs"
@@ -18,12 +18,13 @@ function modelScore(model: { id: string; free: boolean; context: number }) {
 export async function GET(req: Request) {
   const policy = authorize(req)
   if (!policy.ok) return NextResponse.json(policy.error.body, { status: policy.error.status, headers: policy.error.headers })
+  const identity = policy.state.email || policy.state.identity
 
-  const results = await Promise.allSettled(providers.filter((p) => p.configured).map(async (p) => {
+  const results = await Promise.allSettled(providers.filter((p) => isConfigured(p, identity)).map(async (p) => {
     const endpoint = p.id === "pollinations"
       ? `${p.baseUrl}/models?category=text&reliability=reliable&limit=100`
       : `${p.baseUrl}/models`
-    const r = await fetchJson(endpoint, { headers: headers(p) })
+    const r = await fetchJson(endpoint, { headers: headers(p, identity) })
     if (!r.ok) throw new Error(`${p.id}:${r.status}`)
     const body = await r.json() as { data?: Array<{ id: string; name?: string; pricing?: { prompt?: string; promptTextTokens?: string; completion?: string; completionTextTokens?: string }; context_length?: number; context_window?: number; health?: { status?: string } }> }
     const models = (body.data || []).map((m) => ({
@@ -55,10 +56,10 @@ export async function GET(req: Request) {
       free: data.filter((m) => m.free).length,
       maxModelsPerProvider: MAX_MODELS_PER_PROVIDER,
       minModelsPerProvider: 3,
-      configuredProviders: providers.filter((p) => p.configured).map((p) => p.id),
+      configuredProviders: providers.filter((p) => isConfigured(p, identity)).map((p) => p.id),
       providerModelCounts: Object.fromEntries(providerResults.map((r) => [r.provider, { returned: r.models.length, available: r.available }])),
       pricing: { auto: 1, free: 1, small: 1, standard: 2, premium: 5, reasoning: 4 },
-      keylessProviders: providers.filter((p) => p.configured && p.keyless).map((p) => p.id),
+      keylessProviders: providers.filter((p) => isConfigured(p, identity) && p.keyless).map((p) => p.id),
     },
   }, { headers: policyHeaders(policy.state) })
 }
