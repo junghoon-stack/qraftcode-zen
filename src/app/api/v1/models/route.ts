@@ -20,7 +20,7 @@ export async function GET(req: Request) {
   if (!policy.ok) return NextResponse.json(policy.error.body, { status: policy.error.status, headers: policy.error.headers })
   const identity = policy.state.email || policy.state.identity
   const publicAnonymous = policy.state.clientType === "anonymous"
-  const webClient = policy.state.clientType === "web"
+  const imageAllowed = policy.state.clientType === "web" || (policy.state.clientType === "api" && req.headers.get("x-client-type") !== "cli")
 
   const results = await Promise.allSettled(providers.filter((p) => isConfigured(p, identity)).map(async (p) => {
     const endpoint = p.id === "pollinations"
@@ -38,7 +38,7 @@ export async function GET(req: Request) {
       health: m.health?.status,
       image: /image|vision|flux|sdxl|stable-diffusion|dall-e|imagen|midjourney/.test(m.id.toLowerCase()),
       coding: /code|coder|codestral|deepseek-coder|starcoder|qwen.*coder|devstral|swe|program/.test(m.id.toLowerCase()),
-    })).filter((m) => modelScore(m) > -100 && (!m.image || webClient) && (!publicAnonymous || m.free))
+    })).filter((m) => modelScore(m) > -100 && (!m.image || imageAllowed) && (!publicAnonymous || m.free))
     const selected = models.sort((a, b) => modelScore(b) - modelScore(a) || a.name.localeCompare(b.name)).slice(0, MAX_MODELS_PER_PROVIDER)
     return { provider: p.id, models: selected, available: models.length }
   }))
@@ -50,7 +50,7 @@ export async function GET(req: Request) {
 
   const data = [
     { id: "auto", name: "Auto · best available / keyless first", provider: "auto", free: true, context: 0, creditCost: 1, keyless: providers.some((p) => p.configured && p.keyless), image: false, coding: false },
-    ...Array.from(new Map(merged.filter((m) => !m.image || webClient).map((m) => [m.id, m])).values()).map((m) => ({ ...m, creditCost: creditCost(m.id), keyless: providers.find((p) => p.id === m.provider)?.keyless || false })),
+    ...Array.from(new Map(merged.filter((m) => !m.image || imageAllowed).map((m) => [m.id, m])).values()).map((m) => ({ ...m, creditCost: creditCost(m.id), keyless: providers.find((p) => p.id === m.provider)?.keyless || false })),
   ]
   return NextResponse.json({
     object: "list",
@@ -67,6 +67,7 @@ export async function GET(req: Request) {
       clientType: policy.state.clientType,
       imageModels: data.filter((m) => m.image).length,
       codingModels: data.filter((m) => m.coding).length,
+      freeModelRateLimitPerMinute: { web: 20, cli: 60, api: 60, anonymous: 10 },
     },
   }, { headers: policyHeaders(policy.state) })
 }
