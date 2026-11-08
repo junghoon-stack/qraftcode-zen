@@ -18,6 +18,7 @@ const definitions: Omit<Provider, "configured" | "keyless">[] = [
   { id: "pollinations", name: "Pollinations", env: "POLLINATIONS_API_KEY", baseUrl: process.env.POLLINATIONS_BASE_URL || "https://gen.pollinations.ai/v1", adapter: "openai", modelPrefix: "pollinations:" },
   { id: "opus-proxy", name: "Opus Proxy", env: "OPUS_PROXY_API_KEY", baseUrl: process.env.OPUS_PROXY_BASE_URL || "", adapter: "openai", modelPrefix: "opus:" },
   { id: "opencode-zen", name: "Opencode Zen", env: "OPENCODE_ZEN_API_KEY", baseUrl: process.env.OPENCODE_ZEN_BASE_URL || "https://opencode.ai/zen/v1", adapter: "openai", modelPrefix: "zen:" },
+  { id: "openapis-online", name: "OpenAPIs.online", env: "OPENAPIS_ONLINE_API_KEY", baseUrl: process.env.OPENAPIS_ONLINE_BASE_URL || "https://api.openapis.online/openai/v1", adapter: "openai", modelPrefix: "openapis:" },
 ]
 
 export const providers: Provider[] = definitions.map((p) => ({ ...p, keyless: p.id === "pollinations", configured: Boolean(p.baseUrl) && (p.id === "pollinations" || Boolean(process.env[p.env])) }))
