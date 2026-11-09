@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { curatedFreeModels, curatedPollinationsModels, fetchJson, freeFallback, providers, headers, isConfigured } from "@/lib/gateway"
-import { authorize, creditCost, policyHeaders } from "@/lib/policy"
+import { fetchJson, providers, headers, isConfigured } from "@/lib/gateway"
+import { authorize, creditCost, freeModelRateLimits, policyHeaders } from "@/lib/policy"
 
 export const runtime = "nodejs"
 const MAX_MODELS_PER_PROVIDER = 10
@@ -45,8 +45,7 @@ export async function GET(req: Request) {
 
   const providerResults = results.flatMap((r) => r.status === "fulfilled" ? [r.value] : [])
   const catalog = providerResults.flatMap((r) => r.models)
-  const merged = catalog.filter((m) => publicAnonymous ? m.free : (!m.free || curatedFreeModels.includes(m.id) || (m.provider === "pollinations" && curatedPollinationsModels.includes(m.id))))
-  for (const id of freeFallback) if (!merged.some((m) => m.id === id)) merged.push({ id, name: id.replace(/^openrouter:/, ""), provider: "openrouter", free: true, context: 0, health: undefined, image: false, coding: /code|coder/.test(id) })
+  const merged = catalog.filter((m) => m.free)
 
   const data = [
     { id: "auto", name: "Auto · best available / keyless first", provider: "auto", free: true, context: 0, creditCost: 1, keyless: providers.some((p) => p.configured && p.keyless), image: false, coding: false },
@@ -67,7 +66,7 @@ export async function GET(req: Request) {
       clientType: policy.state.clientType,
       imageModels: data.filter((m) => m.image).length,
       codingModels: data.filter((m) => m.coding).length,
-      freeModelRateLimitPerMinute: { web: 20, cli: 60, api: 60, anonymous: 10 },
+      freeModelRateLimitPerMinute: freeModelRateLimits,
     },
   }, { headers: policyHeaders(policy.state) })
 }

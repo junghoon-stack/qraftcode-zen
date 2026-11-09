@@ -12,6 +12,7 @@ export async function POST(req: Request) {
     if (!preflight.ok) return NextResponse.json(preflight.error.body, { status: preflight.error.status, headers: preflight.error.headers })
     if (preflight.state.clientType === "anonymous" || preflight.state.clientType === "cli" || req.headers.get("x-client-type") === "cli") return NextResponse.json({ error: { message: "Image generation is available in the web workspace and Zen API, not anonymous or CLI access" } }, { status: 403, headers: policyHeaders(preflight.state) })
     const identity = preflight.state.email || preflight.state.identity
+    if (body.model && !body.model.includes(":free") && !body.model.includes("/free") && !body.model.includes("pollinations:")) return NextResponse.json({ error: { message: "Only verified free image API models are currently available" } }, { status: 403, headers: policyHeaders(preflight.state) })
     const provider = findProvider(body.model, identity)
     if (!provider || !isConfigured(provider, identity) || provider.adapter !== "openai") return NextResponse.json({ error: { message: "No configured OpenAI-compatible image provider for this model" } }, { status: 503 })
     const policy = authorize(req, body, creditCost(body.model), { allowAnonymous: true })

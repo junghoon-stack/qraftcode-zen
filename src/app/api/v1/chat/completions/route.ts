@@ -11,8 +11,8 @@ export async function POST(req: Request) {
     const identity = preflight.state.email || preflight.state.identity
     const provider = findProvider(body.model, identity)
     if (!provider || !isConfigured(provider, identity)) return NextResponse.json({ error: { message: "No configured provider for this model" } }, { status: 503 })
-    const anonymousFree = preflight.state.clientType !== "anonymous" || !body.model || body.model === "auto" || body.model.includes(":free") || body.model.includes("/free") || body.model.includes("pollinations:")
-    if (!anonymousFree) return NextResponse.json({ error: { message: "Anonymous /v1 access is limited to selected free models" } }, { status: 403, headers: policyHeaders(preflight.state) })
+    const freeModel = !body.model || body.model === "auto" || body.model.includes(":free") || body.model.includes("/free") || body.model.includes("pollinations:")
+    if (!freeModel) return NextResponse.json({ error: { message: "Only verified free API models are currently available" } }, { status: 403, headers: policyHeaders(preflight.state) })
     const policy = authorize(req, body, creditCost(body.model), { allowAnonymous: true })
     if (!policy.ok) return NextResponse.json(policy.error.body, { status: policy.error.status, headers: policy.error.headers })
     const model = body.model === "auto" ? (process.env.AUTO_MODEL || (provider.id === "openrouter" ? cleanModel(curatedFreeModels[0], provider) : "openai")) : (cleanModel(body.model, provider) || (process.env.DEFAULT_MODEL || "openrouter/free"))
