@@ -19,6 +19,14 @@ const definitions: Omit<Provider, "configured" | "keyless">[] = [
   { id: "opus-proxy", name: "Opus Proxy", env: "OPUS_PROXY_API_KEY", baseUrl: process.env.OPUS_PROXY_BASE_URL || "", adapter: "openai", modelPrefix: "opus:" },
   { id: "opencode-zen", name: "Opencode Zen", env: "OPENCODE_ZEN_API_KEY", baseUrl: process.env.OPENCODE_ZEN_BASE_URL || "https://opencode.ai/zen/v1", adapter: "openai", modelPrefix: "zen:" },
   { id: "openapis-online", name: "OpenAPIs.online", env: "OPENAPIS_ONLINE_API_KEY", baseUrl: process.env.OPENAPIS_ONLINE_BASE_URL || "https://api.openapis.online/openai/v1", adapter: "openai", modelPrefix: "openapis:" },
+  { id: "novita", name: "Novita AI", env: "NOVITA_API_KEY", baseUrl: process.env.NOVITA_BASE_URL || "https://api.novita.ai/openai", adapter: "openai", modelPrefix: "novita:" },
+  { id: "nvidia-nim", name: "NVIDIA NIM", env: "NVIDIA_API_KEY", baseUrl: process.env.NVIDIA_BASE_URL || "https://integrate.api.nvidia.com/v1", adapter: "openai", modelPrefix: "nvidia:" },
+  { id: "volcengine-ark", name: "Volcengine Ark", env: "ARK_API_KEY", baseUrl: process.env.ARK_BASE_URL || "https://ark.cn-beijing.volces.com/api/v3", adapter: "openai", modelPrefix: "ark:" },
+  { id: "blazerail", name: "BlazeRail", env: "BLAZERAIL_API_KEY", baseUrl: process.env.BLAZERAIL_BASE_URL || "https://api.blazerail.com/v1", adapter: "openai", modelPrefix: "blazerail:" },
+  { id: "felo", name: "Felo", env: "FELO_API_KEY", baseUrl: process.env.FELO_BASE_URL || "https://openapi.felo.ai/api/v1", adapter: "openai", modelPrefix: "felo:" },
+  { id: "cleanapis", name: "Clean APIs", env: "CLEAN_API_KEY", baseUrl: process.env.CLEAN_BASE_URL || "https://www.cleanapis.com/v1", adapter: "openai", modelPrefix: "clean:" },
+  { id: "sensenova", name: "SenseNova", env: "SENSENOVA_API_KEY", baseUrl: process.env.SENSENOVA_BASE_URL || "https://token.sensetime.com/api/v1", adapter: "openai", modelPrefix: "sensenova:" },
+  { id: "vlmrun", name: "VLM Run", env: "VLMRUN_API_KEY", baseUrl: process.env.VLMRUN_BASE_URL || "https://gateway.vlm.run/openai", adapter: "openai", modelPrefix: "vlmrun:" },
 ]
 
 export const providers: Provider[] = definitions.map((p) => ({ ...p, keyless: p.id === "pollinations", configured: Boolean(p.baseUrl) && (p.id === "pollinations" || Boolean(process.env[p.env])) }))
